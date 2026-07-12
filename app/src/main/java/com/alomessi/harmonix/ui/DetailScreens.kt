@@ -143,7 +143,7 @@ fun QueueScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Surface(
-                            Modifier.size(34.dp),
+                            modifier = Modifier.size(34.dp),
                             shape = CircleShape,
                             color = if (queueIndex == state.currentIndex) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                             onClick = { onSelect(queueIndex) },

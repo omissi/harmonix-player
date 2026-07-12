@@ -239,7 +239,7 @@ private fun PlayerTool(
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Surface(
-            Modifier.size(50.dp),
+            modifier = Modifier.size(50.dp),
             shape = CircleShape,
             color = if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
             onClick = onClick,

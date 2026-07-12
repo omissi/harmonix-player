@@ -252,7 +252,8 @@ fun HarmonixApp(
                                             onPlay = viewModel::play,
                                             onOpenLibrary = { tab = RootTab.LIBRARY },
                                             onOpenTracks = { title, ids ->
-                                                overlay = OverlayScreen.Collection(title, tr("${ids.size} أغنية", "${ids.size} songs"), ids)
+                                                val subtitle = if (settings.language == "ar") "${ids.size} أغنية" else "${ids.size} songs"
+                                                overlay = OverlayScreen.Collection(title, subtitle, ids)
                                             },
                                             onOpenAlbum = { album -> overlay = album.toOverlay() },
                                             modifier = contentModifier,
@@ -271,7 +272,10 @@ fun HarmonixApp(
                                         )
                                         RootTab.PLAYLISTS -> PlaylistsScreen(
                                             tracks, favorites, recent, playCounts, playlists,
-                                            onOpenTracks = { title, ids -> overlay = OverlayScreen.Collection(title, tr("${ids.size} أغنية", "${ids.size} songs"), ids) },
+                                            onOpenTracks = { title, ids ->
+                                                val subtitle = if (settings.language == "ar") "${ids.size} أغنية" else "${ids.size} songs"
+                                                overlay = OverlayScreen.Collection(title, subtitle, ids)
+                                            },
                                             onOpenPlaylist = { overlay = OverlayScreen.Playlist(it.id) },
                                             onCreatePlaylist = { viewModel.createPlaylist(it) },
                                             onRenamePlaylist = viewModel::renamePlaylist,

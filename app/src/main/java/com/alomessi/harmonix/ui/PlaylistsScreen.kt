@@ -1,5 +1,6 @@
 package com.alomessi.harmonix.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -73,6 +74,12 @@ fun PlaylistsScreen(
     var createDialog by remember { mutableStateOf(false) }
     var renameTarget by remember { mutableStateOf<UserPlaylist?>(null) }
     var deleteTarget by remember { mutableStateOf<UserPlaylist?>(null) }
+    val favoritesTitle = tr("المفضلة", "Favorites")
+    val recentlyPlayedTitle = tr("استمعت مؤخرًا", "Recently played")
+    val mostPlayedTitle = tr("الأكثر تشغيلًا", "Most played")
+    val mostPlayedIds = tracks.sortedByDescending { playCounts[it.id] ?: 0 }
+        .filter { (playCounts[it.id] ?: 0) > 0 }
+        .map(Track::id)
     Box(modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize()) {
             item {
@@ -90,21 +97,19 @@ fun PlaylistsScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     SmartPlaylistCard(
-                        tr("المفضلة", "Favorites"), favorites.size, Icons.Default.Favorite,
+                        favoritesTitle, favorites.size, Icons.Default.Favorite,
                         listOf(Color(0xFFFF477E), Color(0xFFFF7B54)), Modifier.weight(1f),
-                    ) { onOpenTracks(tr("المفضلة", "Favorites"), favorites.toList()) }
+                    ) { onOpenTracks(favoritesTitle, favorites.toList()) }
                     SmartPlaylistCard(
                         tr("مؤخرًا", "Recent"), recentIds.size, Icons.Default.History,
                         listOf(Color(0xFF6A5AE0), Color(0xFF8F62FF)), Modifier.weight(1f),
-                    ) { onOpenTracks(tr("استمعت مؤخرًا", "Recently played"), recentIds) }
+                    ) { onOpenTracks(recentlyPlayedTitle, recentIds) }
                 }
             }
             item {
-                val mostPlayed = tracks.sortedByDescending { playCounts[it.id] ?: 0 }
-                    .filter { (playCounts[it.id] ?: 0) > 0 }.map(Track::id)
                 Card(
                     Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp).clickable {
-                        onOpenTracks(tr("الأكثر تشغيلًا", "Most played"), mostPlayed)
+                        onOpenTracks(mostPlayedTitle, mostPlayedIds)
                     },
                     shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -120,7 +125,7 @@ fun PlaylistsScreen(
                         Column(Modifier.weight(1f)) {
                             Text(tr("الأكثر تشغيلًا", "Most played"), fontWeight = FontWeight.Bold)
                             Text(
-                                tr("${mostPlayed.size} أغنية", "${mostPlayed.size} songs"),
+                                tr("${mostPlayedIds.size} أغنية", "${mostPlayedIds.size} songs"),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

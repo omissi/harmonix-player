@@ -70,7 +70,7 @@ class PlayerConnection(context: Context) {
     }
 
     fun play(track: Track, queue: List<Track>) {
-        val action = {
+        val action: () -> Unit = {
             val playableQueue = queue.ifEmpty { listOf(track) }
             val startIndex = playableQueue.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
             controller?.apply {
@@ -78,31 +78,34 @@ class PlayerConnection(context: Context) {
                 prepare()
                 play()
             }
+            Unit
         }
         if (controller == null) pendingPlayback = action else action()
     }
 
     fun playQueue(queue: List<Track>, startIndex: Int = 0, shuffle: Boolean = false) {
         if (queue.isEmpty()) return
-        val action = {
+        val action: () -> Unit = {
             controller?.apply {
                 shuffleModeEnabled = shuffle
                 setMediaItems(queue.map { it.toMediaItem() }, startIndex.coerceIn(queue.indices), 0L)
                 prepare()
                 play()
             }
+            Unit
         }
         if (controller == null) pendingPlayback = action else action()
     }
 
     fun restoreQueue(queue: List<Track>, startIndex: Int, position: Long) {
         if (queue.isEmpty()) return
-        val action = {
+        val action: () -> Unit = {
             controller?.apply {
                 setMediaItems(queue.map { it.toMediaItem() }, startIndex.coerceIn(queue.indices), position.coerceAtLeast(0L))
                 prepare()
                 pause()
             }
+            Unit
         }
         if (controller == null) pendingPlayback = action else action()
     }

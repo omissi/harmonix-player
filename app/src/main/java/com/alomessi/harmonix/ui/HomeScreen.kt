@@ -60,6 +60,9 @@ fun HomeScreen(
     val recent = recentIds.mapNotNull { id -> tracks.find { it.id == id } }.take(12)
     val mostPlayed = tracks.sortedByDescending { playCounts[it.id] ?: 0 }.filter { (playCounts[it.id] ?: 0) > 0 }
     val albums = tracks.toAlbums().take(12)
+    val favoritesTitle = tr("المفضلة", "Favorites")
+    val recentlyPlayedTitle = tr("استمعت مؤخرًا", "Recently played")
+    val mostPlayedTitle = tr("الأكثر تشغيلًا", "Most played")
 
     LazyColumn(modifier) {
         item {
@@ -132,27 +135,27 @@ fun HomeScreen(
             ) {
                 item {
                     QuickAccessCard(
-                        tr("المفضلة", "Favorites"),
+                        favoritesTitle,
                         favoriteIds.size.toString(),
                         Icons.Default.Favorite,
                         Color(0xFFFF5A83),
-                    ) { onOpenTracks(tr("المفضلة", "Favorites"), favoriteIds.toList()) }
+                    ) { onOpenTracks(favoritesTitle, favoriteIds.toList()) }
                 }
                 item {
                     QuickAccessCard(
-                        tr("استمعت مؤخرًا", "Recently played"),
+                        recentlyPlayedTitle,
                         recent.size.toString(),
                         Icons.Default.History,
                         Color(0xFF7C4DFF),
-                    ) { onOpenTracks(tr("استمعت مؤخرًا", "Recently played"), recent.map(Track::id)) }
+                    ) { onOpenTracks(recentlyPlayedTitle, recent.map(Track::id)) }
                 }
                 item {
                     QuickAccessCard(
-                        tr("الأكثر تشغيلًا", "Most played"),
+                        mostPlayedTitle,
                         mostPlayed.size.toString(),
                         Icons.Default.TrendingUp,
                         Color(0xFF26A69A),
-                    ) { onOpenTracks(tr("الأكثر تشغيلًا", "Most played"), mostPlayed.map(Track::id)) }
+                    ) { onOpenTracks(mostPlayedTitle, mostPlayed.map(Track::id)) }
                 }
                 item {
                     QuickAccessCard(
@@ -167,8 +170,8 @@ fun HomeScreen(
         }
 
         if (recent.isNotEmpty()) {
-            item { SectionHeader(tr("استمعت مؤخرًا", "Recently played"), tr("عرض الكل", "See all")) {
-                onOpenTracks(tr("استمعت مؤخرًا", "Recently played"), recentIds)
+            item { SectionHeader(recentlyPlayedTitle, tr("عرض الكل", "See all")) {
+                onOpenTracks(recentlyPlayedTitle, recentIds)
             } }
             item {
                 LazyRow(

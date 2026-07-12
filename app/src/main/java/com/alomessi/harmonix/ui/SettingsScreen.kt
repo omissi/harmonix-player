@@ -99,7 +99,8 @@ fun SettingsScreen(
                     Icons.Default.Language,
                     tr("اللغة", "Language"),
                     if (settings.language == "ar") "العربية" else "English",
-                ) { choiceDialog = "language" }
+                    onClick = { choiceDialog = "language" },
+                )
                 SettingItem(
                     Icons.Default.DarkMode,
                     tr("المظهر", "Theme"),
@@ -108,7 +109,8 @@ fun SettingsScreen(
                         "dark" -> tr("داكن", "Dark")
                         else -> tr("حسب النظام", "System default")
                     },
-                ) { choiceDialog = "theme" }
+                    onClick = { choiceDialog = "theme" },
+                )
                 SettingItem(
                     Icons.Default.ColorLens,
                     tr("لون التطبيق", "App color"),
@@ -118,7 +120,8 @@ fun SettingsScreen(
                         "pink" -> tr("وردي", "Pink")
                         else -> tr("بنفسجي", "Violet")
                     },
-                ) { choiceDialog = "accent" }
+                    onClick = { choiceDialog = "accent" },
+                )
             }
         }
 
@@ -166,12 +169,14 @@ fun SettingsScreen(
                     tr("الحد الأدنى لمدة الأغنية", "Minimum song length"),
                     if (settings.minimumDurationMs == 0L) tr("بدون حد", "No limit")
                     else tr("${settings.minimumDurationMs / 1_000} ثانية", "${settings.minimumDurationMs / 1_000} seconds"),
-                ) { choiceDialog = "duration" }
+                    onClick = { choiceDialog = "duration" },
+                )
                 SettingItem(
                     Icons.Default.Info,
                     tr("الحد الأدنى لحجم الملف", "Minimum file size"),
                     if (settings.minimumSizeBytes == 0L) tr("بدون حد", "No limit") else formatFileSize(settings.minimumSizeBytes),
-                ) { choiceDialog = "size" }
+                    onClick = { choiceDialog = "size" },
+                )
                 SettingItem(
                     Icons.Default.VisibilityOff,
                     tr("الأغاني المخفية", "Hidden songs"),
