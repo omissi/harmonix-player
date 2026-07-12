@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Harmonix Player</string>
+    <string name="playback_channel_name">Music playback</string>
+    <string name="widget_nothing_playing">Nothing playing</string>
+    <string name="widget_choose_song">Choose a song in Harmonix</string>
+    <string name="widget_previous">Previous</string>
+    <string name="widget_play_pause">Play or pause</string>
+    <string name="widget_next">Next</string>
+    <string name="widget_description">Harmonix music controls</string>
+</resources>
