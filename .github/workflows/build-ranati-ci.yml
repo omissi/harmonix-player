@@ -58,6 +58,14 @@ jobs:
           sed -i 's/user-messaging-platform:4\.0\.0/user-messaging-platform:3.1.0/' ranati_src/app/build.gradle.kts
           grep -E 'play-services-ads|user-messaging-platform' ranati_src/app/build.gradle.kts
 
+      - name: Apply source compatibility fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed -i 's/fun setLanguage(value: AppLanguage)/fun updateLanguage(value: AppLanguage)/' ranati_src/app/src/main/java/com/myringtone2027/ranati2027/Preferences.kt
+          sed -i 's/preferences\.setLanguage(/preferences.updateLanguage(/g' ranati_src/app/src/main/java/com/myringtone2027/ranati2027/RanatiApp.kt
+          grep -n 'updateLanguage' ranati_src/app/src/main/java/com/myringtone2027/ranati2027/Preferences.kt ranati_src/app/src/main/java/com/myringtone2027/ranati2027/RanatiApp.kt
+
       - name: Create CI placeholder binary resources
         shell: bash
         run: |
