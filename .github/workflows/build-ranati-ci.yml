@@ -50,6 +50,14 @@ jobs:
           cp -a /tmp/ranati_ci_text/. ranati_src/
           test -f ranati_src/app/src/main/java/com/myringtone2027/ranati2027/RanatiApp.kt
 
+      - name: Pin Google Ads SDK compatible with Kotlin 2.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed -i 's/play-services-ads:25\.4\.0/play-services-ads:23.6.0/' ranati_src/app/build.gradle.kts
+          sed -i 's/user-messaging-platform:4\.0\.0/user-messaging-platform:3.1.0/' ranati_src/app/build.gradle.kts
+          grep -E 'play-services-ads|user-messaging-platform' ranati_src/app/build.gradle.kts
+
       - name: Create CI placeholder binary resources
         shell: bash
         run: |
@@ -95,6 +103,7 @@ jobs:
           cp "$AAB" dist/Ranati2027-release-placeholder.aab
           cp ranati_src/app/build/reports/lint-results-release.html dist/ 2>/dev/null || true
           (cd ranati_src && zip -qr ../dist/Ranati2027-source-placeholder.zip . -x '**/build/*')
+          tar -C "$ANDROID_SDK_ROOT/build-tools" -czf dist/android-build-tools-36.0.0.tar.gz 36.0.0
           sha256sum dist/* > dist/SHA256SUMS.txt
           ls -lh dist
 
