@@ -1,0 +1,116 @@
+name: Build Ranati 2027 CI
+
+on:
+  push:
+    branches: [ranati-2027-ci-final]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ranati-2027-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 16 SDK
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+          yes | sdkmanager --licenses >/dev/null || true
+
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Restore Ranati source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat ci/ranati/chunk*.b64 | base64 -d > /tmp/ranati-ci-text.tar.gz
+          tar -xzf /tmp/ranati-ci-text.tar.gz -C /tmp
+          rm -rf ranati_src
+          mkdir ranati_src
+          cp -a /tmp/ranati_ci_text/. ranati_src/
+          test -f ranati_src/app/src/main/java/com/myringtone2027/ranati2027/RanatiApp.kt
+
+      - name: Create CI placeholder binary resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd ranati_src
+          mkdir -p app/src/main/res/raw app/src/main/res/drawable app/src/main/res/mipmap-mdpi app/src/main/res/mipmap-hdpi app/src/main/res/mipmap-xhdpi app/src/main/res/mipmap-xxhdpi app/src/main/res/mipmap-xxxhdpi
+          PNG='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZrZkAAAAASUVORK5CYII='
+          for f in app_icon_full cover_1 cover_2 cover_3 cover_4 cover_5 cover_6 cover_7 cover_8; do echo "$PNG" | base64 -d > "app/src/main/res/drawable/$f.png"; done
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do echo "$PNG" | base64 -d > "app/src/main/res/mipmap-$d/ic_launcher.png"; done
+          for f in muscat_morning perfume_and_silk last_caravan courtyard_zaffa heliopolis_midnight copper_and_silk cairo_morning_call quarter_zaffa; do printf 'ID3' > "app/src/main/res/raw/$f.mp3"; done
+
+      - name: Unit tests
+        working-directory: ranati_src
+        run: gradle :app:testDebugUnitTest --stacktrace --no-configuration-cache
+
+      - name: Build debug APK
+        working-directory: ranati_src
+        run: gradle :app:assembleDebug --stacktrace --no-configuration-cache
+
+      - name: Build release APK
+        working-directory: ranati_src
+        run: gradle :app:assembleRelease --stacktrace --no-configuration-cache
+
+      - name: Build Play Store AAB
+        working-directory: ranati_src
+        run: gradle :app:bundleRelease --stacktrace --no-configuration-cache
+
+      - name: Lint release
+        working-directory: ranati_src
+        run: gradle :app:lintRelease --stacktrace --no-configuration-cache
+
+      - name: Collect outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp ranati_src/app/build/outputs/apk/debug/app-debug.apk dist/Ranati2027-debug-placeholder.apk
+          APK=$(find ranati_src/app/build/outputs/apk/release -maxdepth 1 -name '*.apk' | head -1)
+          AAB=$(find ranati_src/app/build/outputs/bundle/release -maxdepth 1 -name '*.aab' | head -1)
+          test -n "$APK" && test -f "$APK"
+          test -n "$AAB" && test -f "$AAB"
+          cp "$APK" dist/Ranati2027-release-placeholder.apk
+          cp "$AAB" dist/Ranati2027-release-placeholder.aab
+          cp ranati_src/app/build/reports/lint-results-release.html dist/ 2>/dev/null || true
+          (cd ranati_src && zip -qr ../dist/Ranati2027-source-placeholder.zip . -x '**/build/*')
+          sha256sum dist/* > dist/SHA256SUMS.txt
+          ls -lh dist
+
+      - name: Upload verified compile outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ranati-2027-CI-verified-placeholders
+          path: dist/
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Upload reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ranati-2027-CI-failure-reports
+          path: ranati_src/app/build/reports/
+          if-no-files-found: ignore
+          retention-days: 3
