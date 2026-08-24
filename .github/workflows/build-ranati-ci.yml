@@ -72,7 +72,7 @@ jobs:
           set -euo pipefail
           cd ranati_src
           mkdir -p app/src/main/res/raw app/src/main/res/drawable app/src/main/res/mipmap-mdpi app/src/main/res/mipmap-hdpi app/src/main/res/mipmap-xhdpi app/src/main/res/mipmap-xxhdpi app/src/main/res/mipmap-xxxhdpi
-          PNG='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZrZkAAAAASUVORK5CYII='
+          PNG='iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAM0lEQVR4nO3OQQEAMAjEsGOSpm4ScTVk8EkNNPVu/yx2NucAAAAAAAAAAAAAAAAAAABJMm13ArHk9K1DAAAAAElFTkSuQmCC'
           for f in app_icon_full cover_1 cover_2 cover_3 cover_4 cover_5 cover_6 cover_7 cover_8; do echo "$PNG" | base64 -d > "app/src/main/res/drawable/$f.png"; done
           for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do echo "$PNG" | base64 -d > "app/src/main/res/mipmap-$d/ic_launcher.png"; done
           for f in muscat_morning perfume_and_silk last_caravan courtyard_zaffa heliopolis_midnight copper_and_silk cairo_morning_call quarter_zaffa; do printf 'ID3' > "app/src/main/res/raw/$f.mp3"; done
@@ -87,11 +87,11 @@ jobs:
 
       - name: Build release APK
         working-directory: ranati_src
-        run: gradle :app:assembleRelease --stacktrace --no-configuration-cache
+        run: gradle :app:assembleRelease --stacktrace --no-configuration-cache --max-workers=2
 
       - name: Build Play Store AAB
         working-directory: ranati_src
-        run: gradle :app:bundleRelease --stacktrace --no-configuration-cache
+        run: gradle :app:bundleRelease --stacktrace --no-configuration-cache --max-workers=2
 
       - name: Lint release
         working-directory: ranati_src
