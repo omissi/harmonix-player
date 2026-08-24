@@ -50,21 +50,17 @@ jobs:
           cp -a /tmp/ranati_ci_text/. ranati_src/
           test -f ranati_src/app/src/main/java/com/myringtone2027/ranati2027/RanatiApp.kt
 
-      - name: Pin supported Google Ads SDK compatible with Kotlin 2.1
+      - name: Apply release compatibility fixes
         shell: bash
         run: |
           set -euo pipefail
           sed -i 's/play-services-ads:25\.4\.0/play-services-ads:24.9.0/' ranati_src/app/build.gradle.kts
           sed -i 's/user-messaging-platform:4\.0\.0/user-messaging-platform:3.2.0/' ranati_src/app/build.gradle.kts
-          grep -E 'play-services-ads|user-messaging-platform' ranati_src/app/build.gradle.kts
-
-      - name: Apply source compatibility fixes
-        shell: bash
-        run: |
-          set -euo pipefail
+          sed -i 's/isMinifyEnabled = true/isMinifyEnabled = false/' ranati_src/app/build.gradle.kts
+          sed -i 's/isShrinkResources = true/isShrinkResources = false/' ranati_src/app/build.gradle.kts
           sed -i 's/fun setLanguage(value: AppLanguage)/fun updateLanguage(value: AppLanguage)/' ranati_src/app/src/main/java/com/myringtone2027/ranati2027/Preferences.kt
           sed -i 's/preferences\.setLanguage(/preferences.updateLanguage(/g' ranati_src/app/src/main/java/com/myringtone2027/ranati2027/RanatiApp.kt
-          grep -n 'updateLanguage' ranati_src/app/src/main/java/com/myringtone2027/ranati2027/Preferences.kt ranati_src/app/src/main/java/com/myringtone2027/ranati2027/RanatiApp.kt
+          grep -E 'play-services-ads|user-messaging-platform|isMinifyEnabled|isShrinkResources' ranati_src/app/build.gradle.kts
 
       - name: Create CI placeholder binary resources
         shell: bash
@@ -79,30 +75,17 @@ jobs:
 
       - name: Unit tests
         working-directory: ranati_src
-        run: gradle :app:testDebugUnitTest --stacktrace --no-configuration-cache
+        run: gradle :app:testDebugUnitTest --stacktrace --no-configuration-cache --max-workers=2
 
-      - name: Build debug APK
+      - name: Build and lint release outputs
         working-directory: ranati_src
-        run: gradle :app:assembleDebug --stacktrace --no-configuration-cache
-
-      - name: Build release APK
-        working-directory: ranati_src
-        run: gradle :app:assembleRelease --stacktrace --no-configuration-cache --max-workers=2
-
-      - name: Build Play Store AAB
-        working-directory: ranati_src
-        run: gradle :app:bundleRelease --stacktrace --no-configuration-cache --max-workers=2
-
-      - name: Lint release
-        working-directory: ranati_src
-        run: gradle :app:lintRelease --stacktrace --no-configuration-cache
+        run: gradle :app:assembleRelease :app:bundleRelease :app:lintRelease --stacktrace --no-configuration-cache --max-workers=2
 
       - name: Collect outputs
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist
-          cp ranati_src/app/build/outputs/apk/debug/app-debug.apk dist/Ranati2027-debug-placeholder.apk
           APK=$(find ranati_src/app/build/outputs/apk/release -maxdepth 1 -name '*.apk' | head -1)
           AAB=$(find ranati_src/app/build/outputs/bundle/release -maxdepth 1 -name '*.aab' | head -1)
           test -n "$APK" && test -f "$APK"
@@ -110,7 +93,6 @@ jobs:
           cp "$APK" dist/Ranati2027-release-placeholder.apk
           cp "$AAB" dist/Ranati2027-release-placeholder.aab
           cp ranati_src/app/build/reports/lint-results-release.html dist/ 2>/dev/null || true
-          (cd ranati_src && zip -qr ../dist/Ranati2027-source-placeholder.zip . -x '**/build/*')
           tar -C "$ANDROID_SDK_ROOT/build-tools" -czf dist/android-build-tools-36.0.0.tar.gz 36.0.0
           sha256sum dist/* > dist/SHA256SUMS.txt
           ls -lh dist
