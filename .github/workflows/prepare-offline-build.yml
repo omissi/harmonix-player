@@ -1,0 +1,93 @@
+name: Prepare Offline Android Build Cache
+
+on:
+  push:
+    branches: [offline-build-cache-final]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+          yes | sdkmanager --licenses >/dev/null || true
+
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Warm Android and Kotlin plugin caches
+        run: |
+          gradle :app:compileDebugKotlin --stacktrace --no-configuration-cache || true
+
+      - name: Warm Ranati dependency artifacts
+        run: |
+          mkdir -p /tmp/warm
+          cat > /tmp/warm/settings.gradle <<'EOF'
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
+          rootProject.name='warm'
+          EOF
+          cat > /tmp/warm/build.gradle <<'EOF'
+          configurations { warm }
+          dependencies {
+            warm platform('androidx.compose:compose-bom:2025.06.01')
+            warm 'androidx.core:core-ktx:1.16.0'
+            warm 'androidx.activity:activity-compose:1.10.1'
+            warm 'androidx.lifecycle:lifecycle-runtime-ktx:2.9.1'
+            warm 'androidx.lifecycle:lifecycle-runtime-compose:2.9.1'
+            warm 'androidx.compose.ui:ui'
+            warm 'androidx.compose.ui:ui-tooling-preview'
+            warm 'androidx.compose.foundation:foundation'
+            warm 'androidx.compose.material3:material3'
+            warm 'androidx.compose.material:material-icons-extended'
+            warm 'androidx.media3:media3-common:1.10.1'
+            warm 'androidx.media3:media3-exoplayer:1.10.1'
+            warm 'androidx.media3:media3-session:1.10.1'
+            warm 'com.google.android.gms:play-services-ads:25.4.0'
+            warm 'com.google.android.ump:user-messaging-platform:4.0.0'
+            warm 'junit:junit:4.13.2'
+          }
+          tasks.register('warmAll') { doLast { configurations.warm.files.each { println it } } }
+          EOF
+          cd /tmp/warm
+          gradle warmAll --stacktrace --no-configuration-cache
+
+      - name: Pack offline cache
+        run: |
+          mkdir -p offline/android-sdk offline/gradle-home
+          cp -a "$ANDROID_SDK_ROOT/platforms" offline/android-sdk/
+          cp -a "$ANDROID_SDK_ROOT/build-tools" offline/android-sdk/
+          cp -a "$ANDROID_SDK_ROOT/platform-tools" offline/android-sdk/
+          cp -a "$ANDROID_SDK_ROOT/licenses" offline/android-sdk/ || true
+          cp -a "$HOME/.gradle/caches" offline/gradle-home/
+          cp -a "$HOME/.gradle/kotlin-profile" offline/gradle-home/ 2>/dev/null || true
+          tar -C offline -czf android-offline-build-cache.tar.gz android-sdk gradle-home
+          ls -lh android-offline-build-cache.tar.gz
+
+      - name: Upload offline build cache
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-offline-build-cache
+          path: android-offline-build-cache.tar.gz
+          if-no-files-found: error
+          retention-days: 3
