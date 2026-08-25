@@ -101,8 +101,7 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      - name: Upload cache part 02 if present
-        if: ${{ hashFiles('/tmp/gradle-cache-part-02') != '' }}
+      - name: Upload cache part 02
         uses: actions/upload-artifact@v4
         with:
           name: Ranati-gradle-cache-part-02
