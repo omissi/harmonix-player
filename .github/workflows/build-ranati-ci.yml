@@ -41,16 +41,24 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      - name: Restore last verified Neon source
+      - name: Restore last verified source snapshot
         shell: bash
         run: |
           set -euo pipefail
-          git show bb5bf842ec901a12a3e1bb3660cd647b31ce8b8a:ci/ranati/chunk00.b64 | base64 -d > /tmp/ranati-neon.tar.gz
-          tar -xzf /tmp/ranati-neon.tar.gz -C /tmp
+          git worktree add /tmp/ranati-verified e647144518817577f1a159fac3df65a75111775f
+          cat /tmp/ranati-verified/ci/ranati/chunk*.b64 | base64 -d > /tmp/ranati-old.tar.gz
+          tar -xzf /tmp/ranati-old.tar.gz -C /tmp
           rm -rf ranati_src
           mkdir ranati_src
-          cp -a /tmp/ranati_neon_text/. ranati_src/
+          cp -a /tmp/ranati_ci_text/. ranati_src/
           rm -rf ranati_src/.gradle ranati_src/app/build ranati_src/signing
+          sed -i 's/play-services-ads:25\.4\.0/play-services-ads:24.9.0/' ranati_src/app/build.gradle.kts
+          sed -i 's/user-messaging-platform:4\.0\.0/user-messaging-platform:3.2.0/' ranati_src/app/build.gradle.kts
+          sed -i 's/isMinifyEnabled = true/isMinifyEnabled = false/' ranati_src/app/build.gradle.kts
+          sed -i 's/isShrinkResources = true/isShrinkResources = false/' ranati_src/app/build.gradle.kts
+          sed -i 's/fun setLanguage(value: AppLanguage)/fun updateLanguage(value: AppLanguage)/' ranati_src/app/src/main/java/com/myringtone2027/ranati2027/Preferences.kt
+          sed -i 's/preferences\.setLanguage(/preferences.updateLanguage(/g' ranati_src/app/src/main/java/com/myringtone2027/ranati2027/RanatiApp.kt
+          sed -i 's/<string name="admob_app_id">/<string name="admob_app_id" translatable="false">/' ranati_src/app/src/main/res/values/strings.xml || true
           test -f ranati_src/app/src/main/java/com/myringtone2027/ranati2027/RanatiApp.kt
 
       - name: Apply final V2 source patch
