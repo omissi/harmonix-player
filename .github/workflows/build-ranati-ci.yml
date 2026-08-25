@@ -1,19 +1,19 @@
-name: Export Ranati Offline Toolchain
+name: Build Ranati 2027 Final Neon V2
 
 on:
   push:
-    branches: [ranati-2027-ci-final]
+    branches: [ranati-2027-final-neon-v2]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ranati-offline-toolchain-${{ github.ref }}
+  group: ranati-final-v2-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  export:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -41,58 +41,78 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      - name: Restore last verified source snapshot
+      - name: Restore last verified Neon source
         shell: bash
         run: |
           set -euo pipefail
-          git worktree add /tmp/ranati-verified e647144518817577f1a159fac3df65a75111775f
-          cat /tmp/ranati-verified/ci/ranati/chunk*.b64 | base64 -d > /tmp/ranati-old.tar.gz
-          tar -xzf /tmp/ranati-old.tar.gz -C /tmp
-          rm -rf /tmp/verified_src
-          mkdir /tmp/verified_src
-          cp -a /tmp/ranati_ci_text/. /tmp/verified_src/
-          rm -f /tmp/verified_src/signing/keystore.properties
-          sed -i 's/play-services-ads:25\.4\.0/play-services-ads:24.9.0/' /tmp/verified_src/app/build.gradle.kts
-          sed -i 's/user-messaging-platform:4\.0\.0/user-messaging-platform:3.2.0/' /tmp/verified_src/app/build.gradle.kts
-          sed -i 's/isMinifyEnabled = true/isMinifyEnabled = false/' /tmp/verified_src/app/build.gradle.kts
-          sed -i 's/isShrinkResources = true/isShrinkResources = false/' /tmp/verified_src/app/build.gradle.kts
-          sed -i 's/fun setLanguage(value: AppLanguage)/fun updateLanguage(value: AppLanguage)/' /tmp/verified_src/app/src/main/java/com/myringtone2027/ranati2027/Preferences.kt
-          sed -i 's/preferences\.setLanguage(/preferences.updateLanguage(/g' /tmp/verified_src/app/src/main/java/com/myringtone2027/ranati2027/RanatiApp.kt
-          sed -i 's/<string name="admob_app_id">/<string name="admob_app_id" translatable="false">/' /tmp/verified_src/app/src/main/res/values/strings.xml
+          git show bb5bf842ec901a12a3e1bb3660cd647b31ce8b8a:ci/ranati/chunk00.b64 | base64 -d > /tmp/ranati-neon.tar.gz
+          tar -xzf /tmp/ranati-neon.tar.gz -C /tmp
+          rm -rf ranati_src
+          mkdir ranati_src
+          cp -a /tmp/ranati_neon_text/. ranati_src/
+          rm -rf ranati_src/.gradle ranati_src/app/build ranati_src/signing
+          test -f ranati_src/app/src/main/java/com/myringtone2027/ranati2027/RanatiApp.kt
 
-      - name: Add compile placeholder resources
+      - name: Apply final V2 source patch
         shell: bash
         run: |
           set -euo pipefail
-          cd /tmp/verified_src
+          base64 -d ci/ranati-v2/neon_to_v2.patch.gz.b64 | gzip -d > /tmp/ranati-v2.patch
+          cd ranati_src
+          patch -p1 < /tmp/ranati-v2.patch
+          grep 'versionCode = 2' app/build.gradle.kts
+          grep 'versionName = "1.1.0"' app/build.gradle.kts
+          grep 'AppScreen.ALBUMS' app/src/main/java/com/myringtone2027/ranati2027/RanatiApp.kt
+          grep 'HeroBanner' app/src/main/java/com/myringtone2027/ranati2027/RanatiApp.kt
+
+      - name: Add compile-only placeholder binary resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd ranati_src
           mkdir -p app/src/main/res/raw app/src/main/res/drawable app/src/main/res/mipmap-mdpi app/src/main/res/mipmap-hdpi app/src/main/res/mipmap-xhdpi app/src/main/res/mipmap-xxhdpi app/src/main/res/mipmap-xxxhdpi
           PNG='iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAM0lEQVR4nO3OQQEAMAjEsGOSpm4ScTVk8EkNNPVu/yx2NucAAAAAAAAAAAAAAAAAAABJMm13ArHk9K1DAAAAAElFTkSuQmCC'
-          for f in app_icon_full cover_1 cover_2 cover_3 cover_4 cover_5 cover_6 cover_7 cover_8; do echo "$PNG" | base64 -d > "app/src/main/res/drawable/$f.png"; done
+          for f in app_icon_full cover_1 cover_2 cover_3 cover_4 cover_5 cover_6 cover_7 cover_8 neon_backdrop light_backdrop hero_banner ic_launcher_foreground_art; do echo "$PNG" | base64 -d > "app/src/main/res/drawable/$f.png"; done
           for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do echo "$PNG" | base64 -d > "app/src/main/res/mipmap-$d/ic_launcher.png"; done
           for f in muscat_morning perfume_and_silk last_caravan courtyard_zaffa heliopolis_midnight copper_and_silk cairo_morning_call quarter_zaffa; do printf 'ID3' > "app/src/main/res/raw/$f.mp3"; done
 
-      - name: Warm complete Gradle dependency cache
-        working-directory: /tmp/verified_src
-        run: gradle :app:testDebugUnitTest :app:assembleRelease --stacktrace --no-configuration-cache --max-workers=2
+      - name: Unit tests
+        working-directory: ranati_src
+        run: gradle :app:testDebugUnitTest --stacktrace --no-configuration-cache --max-workers=2
 
-      - name: Package offline build environment
+      - name: Build release APK AAB and lint
+        working-directory: ranati_src
+        run: gradle :app:assembleRelease :app:bundleRelease :app:lintRelease --stacktrace --no-configuration-cache --max-workers=2
+
+      - name: Collect verified outputs
         shell: bash
         run: |
           set -euo pipefail
-          GRADLE_BIN="$(command -v gradle)"
-          GRADLE_HOME_DIR="$(cd "$(dirname "$GRADLE_BIN")/.." && pwd)"
-          tar -C "$(dirname "$GRADLE_HOME_DIR")" -czf /tmp/gradle-8.13-linux.tar.gz "$(basename "$GRADLE_HOME_DIR")"
-          tar -C "$ANDROID_SDK_ROOT" -czf /tmp/android-sdk-36.tar.gz platforms/android-36 build-tools/36.0.0 platform-tools licenses
-          tar -C "$HOME/.gradle" -czf /tmp/gradle-user-home.tar.gz caches wrapper 2>/dev/null || tar -C "$HOME/.gradle" -czf /tmp/gradle-user-home.tar.gz caches
-          ls -lh /tmp/gradle-8.13-linux.tar.gz /tmp/android-sdk-36.tar.gz /tmp/gradle-user-home.tar.gz
+          mkdir -p dist
+          APK=$(find ranati_src/app/build/outputs/apk/release -maxdepth 1 -name '*.apk' | head -1)
+          AAB=$(find ranati_src/app/build/outputs/bundle/release -maxdepth 1 -name '*.aab' | head -1)
+          test -n "$APK" && test -f "$APK"
+          test -n "$AAB" && test -f "$AAB"
+          cp "$APK" dist/Ranati2027-v1.1.0-unsigned-placeholder.apk
+          cp "$AAB" dist/Ranati2027-v1.1.0-unsigned-placeholder.aab
+          cp ranati_src/app/build/reports/lint-results-release.html dist/lint-results-release.html
+          cp ranati_src/app/build/reports/tests/testDebugUnitTest/index.html dist/unit-tests.html 2>/dev/null || true
+          sha256sum dist/* > dist/SHA256SUMS.txt
+          ls -lh dist
 
-      - name: Upload complete offline toolchain
+      - name: Upload verified compile artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Ranati-complete-offline-toolchain
-          path: |
-            /tmp/gradle-8.13-linux.tar.gz
-            /tmp/android-sdk-36.tar.gz
-            /tmp/gradle-user-home.tar.gz
+          name: Ranati-2027-Final-Neon-V2-verified
+          path: dist/
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 3
+
+      - name: Upload reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ranati-2027-Final-Neon-V2-failure-reports
+          path: ranati_src/app/build/reports/
+          if-no-files-found: ignore
+          retention-days: 3
