@@ -39,6 +39,24 @@ jobs:
         with:
           gradle-version: '8.13'
 
+      - name: Package Gradle toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          GRADLE_BIN="$(command -v gradle)"
+          GRADLE_HOME_DIR="$(cd "$(dirname "$GRADLE_BIN")/.." && pwd)"
+          echo "Packaging $GRADLE_HOME_DIR"
+          tar -C "$(dirname "$GRADLE_HOME_DIR")" -czf /tmp/gradle-8.13-linux.tar.gz "$(basename "$GRADLE_HOME_DIR")"
+          ls -lh /tmp/gradle-8.13-linux.tar.gz
+
+      - name: Upload Gradle toolchain
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gradle-8.13-linux-toolchain
+          path: /tmp/gradle-8.13-linux.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Restore Ranati Neon source
         shell: bash
         run: |
@@ -54,6 +72,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          rm -f ranati_src/signing/keystore.properties
           sed -i 's/<string name="admob_app_id">/<string name="admob_app_id" translatable="false">/' ranati_src/app/src/main/res/values/strings.xml || true
           grep 'admob_app_id' ranati_src/app/src/main/res/values/strings.xml
 
@@ -64,8 +83,7 @@ jobs:
           cd ranati_src
           mkdir -p app/src/main/res/raw app/src/main/res/drawable app/src/main/res/mipmap-mdpi app/src/main/res/mipmap-hdpi app/src/main/res/mipmap-xhdpi app/src/main/res/mipmap-xxhdpi app/src/main/res/mipmap-xxxhdpi
           PNG='iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAM0lEQVR4nO3OQQEAMAjEsGOSpm4ScTVk8EkNNPVu/yx2NucAAAAAAAAAAAAAAAAAAABJMm13ArHk9K1DAAAAAElFTkSuQmCC'
-          for f in app_icon_full cover_1 cover_2 cover_3 cover_4 cover_5 cover_6 cover_7 cover_8 ic_launcher_foreground_art; do echo "$PNG" | base64 -d > "app/src/main/res/drawable/$f.png"; done
-          for f in neon_backdrop light_backdrop; do echo "$PNG" | base64 -d > "app/src/main/res/drawable/$f.png"; done
+          for f in app_icon_full cover_1 cover_2 cover_3 cover_4 cover_5 cover_6 cover_7 cover_8 ic_launcher_foreground_art neon_backdrop light_backdrop; do echo "$PNG" | base64 -d > "app/src/main/res/drawable/$f.png"; done
           for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do echo "$PNG" | base64 -d > "app/src/main/res/mipmap-$d/ic_launcher.png"; done
           for f in muscat_morning perfume_and_silk last_caravan courtyard_zaffa heliopolis_midnight copper_and_silk cairo_morning_call quarter_zaffa; do printf 'ID3' > "app/src/main/res/raw/$f.mp3"; done
 
