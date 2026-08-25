@@ -39,21 +39,25 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      - name: Package Gradle toolchain
+      - name: Package offline Android build toolchain
         shell: bash
         run: |
           set -euo pipefail
           GRADLE_BIN="$(command -v gradle)"
           GRADLE_HOME_DIR="$(cd "$(dirname "$GRADLE_BIN")/.." && pwd)"
-          echo "Packaging $GRADLE_HOME_DIR"
           tar -C "$(dirname "$GRADLE_HOME_DIR")" -czf /tmp/gradle-8.13-linux.tar.gz "$(basename "$GRADLE_HOME_DIR")"
-          ls -lh /tmp/gradle-8.13-linux.tar.gz
+          tar -C "$ANDROID_SDK_ROOT" -czf /tmp/android-sdk-36.tar.gz platforms/android-36 build-tools/36.0.0 platform-tools licenses
+          tar -C "$HOME/.gradle" -czf /tmp/gradle-cache.tar.gz caches 2>/dev/null || true
+          ls -lh /tmp/gradle-8.13-linux.tar.gz /tmp/android-sdk-36.tar.gz /tmp/gradle-cache.tar.gz
 
-      - name: Upload Gradle toolchain
+      - name: Upload offline toolchain
         uses: actions/upload-artifact@v4
         with:
-          name: Gradle-8.13-linux-toolchain
-          path: /tmp/gradle-8.13-linux.tar.gz
+          name: Ranati-offline-build-toolchain
+          path: |
+            /tmp/gradle-8.13-linux.tar.gz
+            /tmp/android-sdk-36.tar.gz
+            /tmp/gradle-cache.tar.gz
           if-no-files-found: error
           retention-days: 1
 
@@ -74,7 +78,6 @@ jobs:
           set -euo pipefail
           rm -f ranati_src/signing/keystore.properties
           sed -i 's/<string name="admob_app_id">/<string name="admob_app_id" translatable="false">/' ranati_src/app/src/main/res/values/strings.xml || true
-          grep 'admob_app_id' ranati_src/app/src/main/res/values/strings.xml
 
       - name: Create compile-only placeholder binary resources
         shell: bash
